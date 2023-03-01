@@ -1,0 +1,39 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: build-push-docker-image
+spec:
+  workspaces:
+    - name: output
+  params:
+    - name: pathToDockerFile
+      description: Path to Dockerfile
+      default: Dockerfile
+      type: string
+    - name: pathToContext
+      description: The build context used by Kaniko
+      default: /workspace/output/
+  steps:
+    - name: build-and-push
+      image: gcr.io/kaniko-project/executor:v0.10.0
+      env:
+        - name: "DOCKER_CONFIG"
+          value: "/builder/home/.docker/"
+      command:
+        - /kaniko/executor
+      args:
+        - --dockerfile=/workspace/output/Dockerfile
+        - --destination=sugamdocker35/go-app:latest
+        - --context=/workspace/output/
+      volumeMounts:
+        - name: docker-config
+          mountPath: /builder/home/.docker
+  volumes:
+    - name: docker-config
+      secret:
+        secretName: docker-config
+        items:
+          - key: .dockerconfigjson
+            path: config.json
+
+

@@ -1,0 +1,55 @@
+---
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: golang-test-pipeline
+spec:
+  workspaces:
+    - name: shared-workspace
+  tasks:
+    - name: fetch-repository
+      taskRef:
+        name: git-clone
+      workspaces:
+        - name: output
+          workspace: shared-workspace
+      params:
+        - name: url
+          value: https://github.com/babulalt/simple-go.git
+        - name: revision
+          value: main
+        - name: subdirectory
+          value: ""
+        - name: deleteExisting
+          value: "true"
+    - name: golangci-lint
+      taskRef:
+        name: golangci-lint
+      runAfter:
+        - fetch-repository
+      workspaces:
+        - name: output
+          workspace: shared-workspace
+      params:
+        - name: package
+          value: simple-go
+    - name: build-push
+      taskRef:
+        name: build-push-docker-image
+      runAfter:
+        - golangci-lint
+      workspaces:
+        - name: output
+          workspace: shared-workspace
+---
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: golang-test-pipeline-run
+spec:
+  pipelineRef:
+    name: golang-test-pipeline
+  workspaces:
+    - name: shared-workspace
+      persistentvolumeclaim:
+        claimName: golang-source-pvc
