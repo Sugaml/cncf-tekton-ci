@@ -1,0 +1,49 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: git-clone
+  labels:
+    app.kubernetes.io/version: "0.7"
+  annotations:
+    tekton.dev/pipelines.minVersion: "0.29.0"
+    tekton.dev/categories: Git
+    tekton.dev/tags: git
+    tekton.dev/displayName: "git clone"
+    tekton.dev/platforms: "linux/amd64,linux/s390x,linux/ppc64le,linux/arm64"
+spec:
+  workspaces:
+    - name: workspace
+      description: The git repo will be cloned onto the volume backing this Workspace.
+  params:
+    - name: repo
+      description: git url to clone
+      type: string
+    - name: revision
+      description: git revision to checkout (branch, tag, sha, ref…)
+      type: string
+      default: master
+    - name: sub_directory
+      description: subdirectory change
+      default: "/"
+  steps:
+    - name: git-clone
+      image: zeronecloud/clone:latest
+      env:
+        - name: PARAM_URL
+          value: $(params.repo)
+        - name: PARAM_REVISION
+          value: $(params.revision)
+        - name: PARAM_SUBDIR
+          value: $(params.sub_directory)
+        - name: WORKSPACE_OUTPUT_PATH
+          value: $(workspaces.workspace.path)
+      script: |
+        #!/bin/bash
+        sleep 1
+        rm -rf "${WORKSPACE_OUTPUT_PATH}/app"
+        rm -rf "${WORKSPACE_OUTPUT_PATH}/*"
+        git clone -b "${PARAM_REVISION}" "${PARAM_URL}" "${WORKSPACE_OUTPUT_PATH}/app"
+        sleep 1
+        mv ${WORKSPACE_OUTPUT_PATH}/app${PARAM_SUBDIR}* ${WORKSPACE_OUTPUT_PATH}/app${PARAM_SUBDIR}.* ${WORKSPACE_OUTPUT_PATH}/ 2>/dev/null
+        echo "Successfully cloned."
+        sleep 1

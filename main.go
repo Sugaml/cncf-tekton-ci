@@ -1,74 +1,54 @@
 package main
 
 import (
-	"time"
-
+	"github.com/babulalt/tekton/models"
 	"github.com/babulalt/tekton/src"
-	"github.com/emicklei/go-restful/log"
+	"github.com/joho/godotenv"
+	log "github.com/sirupsen/logrus"
 )
 
 func main() {
-	clinet, err := src.NewTektonClient()
+	err := godotenv.Load()
 	if err != nil {
-		log.Printf("error in create client :: %v", err)
-	}
-	_, err = clinet.CreateSecrets()
-	// CloneAndBuild(clinet, "golang-appv2")
-}
-
-func CloneAndBuild(clinet *src.Clients, namespace string) error {
-	log.Print("Started Clone and build process...")
-	nSpec := src.SetNamespace(namespace)
-	err := clinet.CreateNamespace(nSpec)
-	if err != nil {
-		log.Print("error creating namespace", err)
-		return err
+		log.Fatalf("Error getting env, not comming through %v", err)
 	} else {
-		log.Print("created namepsace :: ", namespace)
+		log.Info("loading env variables")
 	}
+	var mapFiles map[string]interface{} = map[string]interface{}{}
 
-	s, err := clinet.CreateSecret(namespace)
+	input := &models.CIRequest{
+		Name:          "tekton",
+		EnvironmentId: 6036,
+		Namespace:     "tekton-cistep-1",
+		// ConfigPath:        "/home/sugam/Downloads/ovh-cluster/ovhkube",
+		ConfigPath:        "/home/sugam/.kube/config",
+		GitUrl:            "https://github.com/babulalt/simple-go.git",
+		GitBranch:         "simple-task",
+		ImageRepoUsername: "sugamdocker35",
+		ImageRepoPassword: "Docker123",
+		GitUserName:       "babulalt",
+		GitAccessToken:    "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",
+		ImageRepoProject:  "sugamdocker35",
+		RepositoryImage: models.RepositoryImage{
+			Repository: "tekton-abc",
+			Name:       "tekton-ci",
+			Tag:        "latest",
+		},
+		BaseImage:   "golang",
+		BaseTag:     "1.16",
+		BuildScript: "FROM golang:1.16-alpine\nRUN mkdir /app\nADD . /app\nWORKDIR /app\nRUN go build -o main .\nCMD ['/app/main']",
+		//CISteps:   steps,
+		CiFiles:   &mapFiles,
+		PluginUrl: "./data",
+	}
+	pl, err := src.NewPipeline(input)
 	if err != nil {
-		log.Print("error creating create", err)
-		return err
+		log.Errorf("Initalize pipeline error :: %v", err)
+		return
 	}
-	log.Print("created secret :: ", s.Name)
-
-	task := src.Setuptask()
-	cTask, err := clinet.CreateTask(namespace, task)
+	err = pl.CreatePipeline()
 	if err != nil {
-		log.Print("error creating task")
-		return err
+		log.Errorf("create pipeline error :: %v", err)
+		return
 	}
-	log.Print("created task :: ", cTask.Name)
-
-	pipelineResources := src.SetupPipeLineResources()
-	for _, pipelineResource := range *pipelineResources {
-		cPipeResource, err := clinet.CreatePipelineResource(namespace, &pipelineResource)
-		if err != nil {
-			log.Print("error creating pipeline resource :: ", err)
-			return err
-		}
-		log.Print("created pipeline resource ::", cPipeResource.Name)
-	}
-
-	pipeline := src.SetupPipeline()
-	cPipeline, err := clinet.CreatePipeline(namespace, pipeline)
-	if err != nil {
-		log.Print("error creating pipeline", err)
-		return err
-	}
-	log.Print("created pipeline ::", cPipeline.Name)
-
-	pipelineRun := src.SetupPipelineRun()
-	cPipelineRun, err := clinet.CreatePipelineRun(namespace, pipelineRun)
-	if err != nil {
-		log.Print("error creating pipeline", err)
-		return err
-	}
-	log.Print("created pipeline ::", cPipelineRun.Name)
-
-	go clinet.EventWatcher(namespace)
-	time.Sleep(1 * time.Minute)
-	return nil
 }
