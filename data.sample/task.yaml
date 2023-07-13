@@ -4,12 +4,9 @@ metadata:
   name: git-clone
   labels:
     app.kubernetes.io/version: "0.7"
+    app.babulal.com/provider: "git"
   annotations:
-    tekton.dev/pipelines.minVersion: "0.29.0"
-    tekton.dev/categories: Git
-    tekton.dev/tags: git
     tekton.dev/displayName: "git clone"
-    tekton.dev/platforms: "linux/amd64,linux/s390x,linux/ppc64le,linux/arm64"
 spec:
   workspaces:
     - name: workspace

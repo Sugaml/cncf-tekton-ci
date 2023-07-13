@@ -10,7 +10,7 @@ import (
 )
 
 type TaskGetter interface {
-	Task(ns string) TaskInterface
+	Tasks(ns string) TaskInterface
 }
 
 type TaskInterface interface {
@@ -39,7 +39,11 @@ func (c *task) Create(ctx context.Context, task *v1.Task, opts metav1.CreateOpti
 		logrus.Infof("Task %s created.", result.Name)
 		return result, nil
 	}
-	result, err := c.client.TektonV1().Tasks(c.ns).Update(context.Background(), task, metav1.UpdateOptions{})
+	taskUpdated := &v1.Task{}
+	taskUpdated.Name = task.Name
+	taskUpdated.Namespace = task.Namespace
+	taskUpdated.Spec = task.Spec
+	result, err := c.client.TektonV1().Tasks(c.ns).Update(context.Background(), taskUpdated, metav1.UpdateOptions{})
 	if err != nil {
 		return task, err
 	}

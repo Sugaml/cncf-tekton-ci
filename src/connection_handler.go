@@ -53,7 +53,7 @@ func (p *PipelineController) CreatePipeline() error {
 	if err != nil {
 		return err
 	}
-	reult, err := tknctl.Task(p.Input.Namespace).Create(ctx, task, metav1.CreateOptions{})
+	reult, err := tknctl.Tasks(p.Input.Namespace).Create(ctx, task, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
