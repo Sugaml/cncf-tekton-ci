@@ -57,6 +57,6 @@ func (p *PipelineController) CreatePipeline() error {
 	if err != nil {
 		return err
 	}
-	logrus.Info(reult)
+	logrus.Info(reult.Name)
 	return nil
 }

@@ -2,10 +2,12 @@ package k8s
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/sirupsen/logrus"
 	apiv1 "k8s.io/api/core/v1"
+	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -31,15 +33,24 @@ func newNamespace(clientset *kubernetes.Clientset, ns string) *namesapce {
 
 func (c *namesapce) Create(ctx context.Context, opts metav1.CreateOptions) error {
 	_, err := c.clientset.CoreV1().Namespaces().Get(ctx, c.ns, metav1.GetOptions{})
-	if err == nil {
-		return nil
-	}
-	ns := setNamespace(c.ns)
-	_, err = c.clientset.CoreV1().Namespaces().Create(ctx, ns, opts)
 	if err != nil {
-		fmt.Printf("unable to create namespace%v", err)
+		if k8serr.IsNotFound(err) {
+			ns := setNamespace(c.ns)
+			_, err = c.clientset.CoreV1().Namespaces().Create(ctx, ns, v1.CreateOptions{})
+			if err != nil {
+				return err
+			}
+			logrus.Infof("Namespace %s created.", ns.Name)
+			return nil
+		}
 		return err
 	}
+	updateNs := setNamespace(c.ns)
+	_, err = c.clientset.CoreV1().Namespaces().Update(ctx, updateNs, v1.UpdateOptions{})
+	if err != nil {
+		return err
+	}
+	logrus.Infof("Namespace %s configured.", updateNs.Name)
 	return nil
 }
 
